@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08">
+    <FIToFICstmrCdtTrf>
+        <GrpHdr>
+            <MsgId>ABCDEFG123456789</MsgId>
+            <CreDtTm>2023-11-22T10:30:00</CreDtTm>
+            <NbOfTxs>1</NbOfTxs>
+            <CtrlSum>1500.00</CtrlSum>
+            <InitgPty>
+                <Nm>Acme Corporation</Nm>
+            </InitgPty>
+        </GrpHdr>
+        <CdtTrfTxInf>
+            <PmtId>
+                <EndToEndId>INV/20231122/000123</EndToEndId>
+            </PmtId>
+            <PmtTpInf>
+                <SvcLvl>
+                    <Cd>SEPA</Cd>
+                </SvcLvl>
+            </PmtTpInf>
+            <Amt>
+                <InstdAmt Ccy="EUR">1500.00</InstdAmt>
+            </Amt>
+            <Dbtr>
+                <Nm>Acme Corporation</Nm>
+                <PstlAdr>
+                    <StrtNm>Main Street 123</StrtNm>
+                    <BldgNb>A</BldgNb>
+                    <PstCd>12345</PstCd>
+                    <TwnNm>Anytown</TwnNm>
+                    <Ctry>DE</Ctry>
+                </PstlAdr>
+            </Dbtr>
+            <DbtrAcct>
+                <Id>
+                    <IBAN>DE12345678901234567890</IBAN>
+                </Id>
+            </DbtrAcct>
+            <DbtrAgt>
+                <FinInstnId>
+                    <BIC>BANKDEFFXXX</BIC>
+                </FinInstnId>
+            </DbtrAgt>
+            <CdtrAgt>
+                <FinInstnId>
+                    <BIC>RECEUS33XXX</BIC>
+                </FinInstnId>
+            </CdtrAgt>
+            <Cdtr>
+                <Nm>Widgets Inc.</Nm>
+                <PstlAdr>
+                    <StrtNm>Oak Avenue 5</StrtNm>
+                    <PstCd>54321</PstCd>
+                    <TwnNm>Example City</TwnNm>
+                    <Ctry>US</Ctry>
+                </PstlAdr>
+            </Cdtr>
+            <CdtrAcct>
+                <Id>
+                    <IBAN>US12345678901234567890</IBAN>
+                </Id>
+            </CdtrAcct>
+            <RmtInf>
+                <Ustrd>Invoice Payment INV/20231122/000123</Ustrd>
+            </RmtInf>
+        </CdtTrfTxInf>
+    </FIToFICstmrCdtTrf>
+</Document>

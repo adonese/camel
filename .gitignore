@@ -1,0 +1,20 @@
+# Compiled class files
+target/
+
+# Maven/Gradle dependencies and metadata
+.idea/
+.mvn/
+.gradle/
+
+# Logs
+*.log
+
+# IDE-Specific Files (Adjust if using a different IDE)
+.project
+.classpath
+*.iml
+
+# Other common exclusions
+# (You can tailor this further)
+**/thumbs.db
+**/.DS_Store
