@@ -4,8 +4,8 @@
         <GrpHdr>
             <MsgId>ABCDEFG123456789</MsgId>
             <CreDtTm>2023-11-22T10:30:00</CreDtTm>
-            <NbOfTxs>1</NbOfTxs>
-            <CtrlSum>1500.00</CtrlSum>
+            <NbOfTxs>2</NbOfTxs>
+            <CtrlSum>3000.00</CtrlSum>
             <InitgPty>
                 <Nm>Acme Corporation</Nm>
             </InitgPty>
@@ -22,6 +22,7 @@
             <Amt>
                 <InstdAmt Ccy="EUR">1500.00</InstdAmt>
             </Amt>
+            <ChrgBr>SHAR</ChrgBr>
             <Dbtr>
                 <Nm>Acme Corporation</Nm>
                 <PstlAdr>
@@ -63,6 +64,62 @@
             </CdtrAcct>
             <RmtInf>
                 <Ustrd>Invoice Payment INV/20231122/000123</Ustrd>
+            </RmtInf>
+        </CdtTrfTxInf>
+        <CdtTrfTxInf>
+            <PmtId>
+                <EndToEndId>INV/20231122/000124</EndToEndId>
+            </PmtId>
+            <PmtTpInf>
+                <SvcLvl>
+                    <Cd>SEPA</Cd>
+                </SvcLvl>
+            </PmtTpInf>
+            <Amt>
+                <InstdAmt Ccy="EUR">1500.00</InstdAmt>
+            </Amt>
+            <ChrgBr>DEBT</ChrgBr>
+            <Dbtr>
+                <Nm>Acme Corporation</Nm>
+                <PstlAdr>
+                    <StrtNm>Main Street 123</StrtNm>
+                    <BldgNb>A</BldgNb>
+                    <PstCd>12345</PstCd>
+                    <TwnNm>Anytown</TwnNm>
+                    <Ctry>DE</Ctry>
+                </PstlAdr>
+            </Dbtr>
+            <DbtrAcct>
+                <Id>
+                    <IBAN>DE12345678901234567890</IBAN>
+                </Id>
+            </DbtrAcct>
+            <DbtrAgt>
+                <FinInstnId>
+                    <BIC>BANKDEFFXXX</BIC>
+                </FinInstnId>
+            </DbtrAgt>
+            <CdtrAgt>
+                <FinInstnId>
+                    <BIC>ABCDEFGHXXX</BIC>
+                </FinInstnId>
+            </CdtrAgt>
+            <Cdtr>
+                <Nm>Gadgets Ltd.</Nm>
+                <PstlAdr>
+                    <StrtNm>High Street 789</StrtNm>
+                    <PstCd>98765</PstCd>
+                    <TwnNm>Another City</TwnNm>
+                    <Ctry>UK</Ctry>
+                </PstlAdr>
+            </Cdtr>
+            <CdtrAcct>
+                <Id>
+                    <IBAN>GB98765432109876543210</IBAN>
+                </Id>
+            </CdtrAcct>
+            <RmtInf>
+                <Ustrd>Invoice Payment INV/20231122/000124</Ustrd>
             </RmtInf>
         </CdtTrfTxInf>
     </FIToFICstmrCdtTrf>
