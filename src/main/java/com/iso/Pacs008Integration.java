@@ -46,7 +46,7 @@ public class Pacs008Integration {
                 from("direct:processPacs008")
                         .routeId("pacs008-processor")
                         .log("Received PACS.008 message: ${body}")
-                        .unmarshal().jacksonXml()
+                        .unmarshal(new JacksonXMLDataFormat())
                         .process(new Processor() {
                             @Override
                             public void process(Exchange exchange) throws Exception {
@@ -59,29 +59,33 @@ public class Pacs008Integration {
                                 String currency = null;
 
                                 if (pacs008 != null) {
-                                    Map<String, Object> grpHdr = (Map<String, Object>) pacs008.get("GrpHdr");
-                                    if (grpHdr != null) {
-                                        messageId = (String) grpHdr.get("MsgId");
-                                    }
-
-                                    Map<String, Object> cdtTrfTxInf = (Map<String, Object>) pacs008.get("CdtTrfTxInf");
-                                    if (cdtTrfTxInf != null) {
-                                        Map<String, Object> dbtr = (Map<String, Object>) cdtTrfTxInf.get("Dbtr");
-                                        if (dbtr != null) {
-                                            debtorName = (String) dbtr.get("Nm");
+                                    Map<String, Object> fiToFICstmrCdtTrf = (Map<String, Object>) pacs008.get("FIToFICstmrCdtTrf");
+                                    if (fiToFICstmrCdtTrf != null) {
+                                        Map<String, Object> grpHdr = (Map<String, Object>) fiToFICstmrCdtTrf.get("GrpHdr");
+                                        if (grpHdr != null) {
+                                            messageId = (String) grpHdr.get("MsgId");
                                         }
 
-                                        Map<String, Object> cdtr = (Map<String, Object>) cdtTrfTxInf.get("Cdtr");
-                                        if (cdtr != null) {
-                                            creditorName = (String) cdtr.get("Nm");
-                                        }
+                                        List<Map<String, Object>> cdtTrfTxInfList = (List<Map<String, Object>>) fiToFICstmrCdtTrf.get("CdtTrfTxInf");
+                                        if (cdtTrfTxInfList != null && !cdtTrfTxInfList.isEmpty()) {
+                                            Map<String, Object> cdtTrfTxInf = cdtTrfTxInfList.get(0);
+                                            Map<String, Object> dbtr = (Map<String, Object>) cdtTrfTxInf.get("Dbtr");
+                                            if (dbtr != null) {
+                                                debtorName = (String) dbtr.get("Nm");
+                                            }
 
-                                        Map<String, Object> amt = (Map<String, Object>) cdtTrfTxInf.get("Amt");
-                                        if (amt != null) {
-                                            Map<String, Object> instdAmt = (Map<String, Object>) amt.get("InstdAmt");
-                                            if (instdAmt != null) {
-                                                amount = Double.parseDouble((String) instdAmt.get(""));
-                                                currency = (String) instdAmt.get("Ccy");
+                                            Map<String, Object> cdtr = (Map<String, Object>) cdtTrfTxInf.get("Cdtr");
+                                            if (cdtr != null) {
+                                                creditorName = (String) cdtr.get("Nm");
+                                            }
+
+                                            Map<String, Object> amt = (Map<String, Object>) cdtTrfTxInf.get("Amt");
+                                            if (amt != null) {
+                                                Map<String, Object> instdAmt = (Map<String, Object>) amt.get("InstdAmt");
+                                                if (instdAmt != null) {
+                                                    amount = Double.parseDouble((String) instdAmt.get(""));
+                                                    currency = (String) instdAmt.get("Ccy");
+                                                }
                                             }
                                         }
                                     }
@@ -96,6 +100,25 @@ public class Pacs008Integration {
                                 exchange.getIn().setHeader("MessageId", messageId);
                                 exchange.getIn().setBody(pacs008);
                             }
+                        })
+                        .process(exchange -> {
+                            // Generate random payment status
+                            Random random = new Random();
+                            String[] statuses = {"ACCP", "RJCT", "UNKN"};
+                            String paymentStatus = statuses[random.nextInt(statuses.length)];
+
+                            // Send payment status to PACS.002 service, to a golang service
+                            String paymentStatusUrl = "http://0.0.0.0:8082/pacs002?bridgeEndpoint=true";
+                            String messageId = exchange.getIn().getHeader("MessageId", String.class);
+                            String paymentStatusJson = String.format(
+                                    "{\"messageId\":\"%s\",\"originalMessage\":{\"messageId\":\"%s\"},\"status\":\"%s\"}",
+                                    UUID.randomUUID(), messageId, paymentStatus);
+
+                            exchange.getIn().setBody(paymentStatusJson);
+                            exchange.getIn().setHeader(Exchange.HTTP_METHOD, HttpMethods.POST);
+                            exchange.getIn().setHeader("Content-Type", "application/json");
+
+                            exchange.getContext().createProducerTemplate().send(paymentStatusUrl, exchange);
                         })
                         .multicast()
                         .to("direct:notify", "direct:audit");
