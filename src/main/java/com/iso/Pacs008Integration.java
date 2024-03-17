@@ -37,6 +37,10 @@ public class Pacs008Integration {
             public void configure() throws Exception {
                 from("activemq:queue:pacs008")
                         .routeId("pacs008-receiver")
+                        .to("direct:processPacs008");
+
+                from("direct:processPacs008")
+                        .routeId("pacs008-processor")
                         .log("Received PACS.008 message: ${body}")
                         .unmarshal().jacksonXml()
                         .process(new Processor() {
@@ -81,8 +85,8 @@ public class Pacs008Integration {
 
                                 // Perform business logic or further processing
                                 // For example, update account balances, generate notifications, etc.
-                                log.info("Processing payment: MessageId={}, Debtor={}, Creditor={}, Amount={}, Currency={}",
-                                        messageId, debtorName, creditorName, amount, currency);
+                                System.out.println(String.format("Processing payment: MessageId=%s, Debtor=%s, Creditor=%s, Amount=%s, Currency=%s",
+                                        messageId, debtorName, creditorName, amount, currency));
 
                                 // Set the processed information back to the exchange
                                 exchange.getIn().setHeader("MessageId", messageId);
@@ -107,6 +111,17 @@ public class Pacs008Integration {
                         .to("log:payment-audit");
             }
         });
+
+        // HTTP endpoint route
+        context.addRoutes(new RouteBuilder() {
+            @Override
+            public void configure() throws Exception {
+                from("jetty:http://0.0.0.0:8080/pacs008")
+                        .routeId("pacs008-http-endpoint")
+                        .to("direct:processPacs008");
+            }
+        });
+
 
         // Aggregator route
         context.addRoutes(new RouteBuilder() {
