@@ -6,10 +6,14 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.jackson.JacksonDataFormat;
+import org.apache.camel.component.jacksonxml.JacksonXMLDataFormat;
+import org.apache.camel.http.common.HttpMethods;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.model.dataformat.JsonLibrary;
 
 import java.io.FileNotFoundException;
+import java.util.*;
+
 import java.util.Map;
 
 public class Pacs008Integration {
@@ -105,9 +109,16 @@ public class Pacs008Integration {
                 from("direct:audit")
                         .routeId("payment-audit")
                         .log("Auditing payment for MessageId: ${header.MessageId}")
+                        .process(exchange -> {
+                            // Convert the body to a Map
+                            Map<String, Object> pacs008 = exchange.getIn().getBody(Map.class);
+                            exchange.getIn().setBody(pacs008);
+                        })
                         .marshal().json(JsonLibrary.Jackson)
-                        // Write the audited payment to a database or file
+                        // Write the audited payment to a file
                         .to("file:target/audited-payments?fileName=${header.MessageId}.json")
+                        // Send the audited payment to the aggregator
+                        .to("direct:aggregate")
                         .to("log:payment-audit");
             }
         });
@@ -122,18 +133,12 @@ public class Pacs008Integration {
             }
         });
 
-
         // Aggregator route
         context.addRoutes(new RouteBuilder() {
             @Override
             public void configure() throws Exception {
-                from("file:target/audited-payments?noop=true&include=.*\\.json")
+                from("direct:aggregate")
                         .routeId("payment-aggregator")
-                        .onException(FileNotFoundException.class)
-                        .handled(true)
-                        .log("File not found: ${header.CamelFileAbsolutePath}")
-                        .to("log:file-not-found")
-                        .end()
                         .log("Aggregating payment: ${body}")
                         .aggregate(constant(true), new AggregationStrategy() {
                             @Override
@@ -155,8 +160,48 @@ public class Pacs008Integration {
             }
         });
 
+        // Aggregated payments report route
+        context.addRoutes(new RouteBuilder() {
+            @Override
+            public void configure() throws Exception {
+                from("jetty:http://0.0.0.0:8081/aggregated-payments")
+                        .routeId("aggregated-payments-report")
+                        .log("Generating aggregated payments report")
+                        .process(exchange -> {
+                            // Read the aggregated payments file
+                            String aggregatedPaymentsFile = "target/aggregated-payments/aggregated-payments.json";
+                            String aggregatedPayments = "[]"; // Default empty JSON array
+
+                            // Check if the file exists
+                            java.io.File file = new java.io.File(aggregatedPaymentsFile);
+                            if (file.exists()) {
+                                // File exists, read its content
+                                aggregatedPayments = exchange.getContext().getTypeConverter()
+                                        .convertTo(String.class, file);
+                            }
+
+                            // Set the aggregated payments as the response body
+                            exchange.getIn().setBody(aggregatedPayments);
+                        })
+                        .setHeader("Content-Type", constant("application/json"));
+            }
+        });
+
+        // Start Camel context
         context.start();
-        Thread.sleep(60000); // Run for 1 minute
-        context.stop();
+
+        // Keep the application running until manually stopped
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                context.stop();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }));
+
+        while (true) {
+            Thread.sleep(1000);
+        }
     }
 }
+
