@@ -6,6 +6,8 @@ I am proud to present the pacs.008 Payment Processing System, a comprehensive so
 
 The idea is that I have been mostly doing iso8583 and other in-house apis, but i never really had the chance to get my hands dirty when it comes to iso20022 -- this a good starting point for me. Also, <https://adonese.sd/book> touched on many payment topics but still didn't manage to have any input on iso20022 this is the time.
 
+_I didn't have any prior experience with apache camel before, this is the very first time I have had the chance to ever work with it_ if the code doesn't look like a camel best practice code, then it is because of that.
+
 I'm also running this experiment in a totally new environment to me, that is apache camel and the whole enterprise integration business. I have tried through this project to cover these topics:
 - file based integration, you can see how we are using apache camel to set up endpoints and routes for /aggregated-payments and /audited-payments -- file based integration while resembles a lot of experiences I have had before:
     - in pos, we had that concept of batch upload for merchants transactions settlement -- but even that api was deprecated and I didn't get to explore it in more details
