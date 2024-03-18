@@ -67,6 +67,200 @@ Let's consider a real-world use case to illustrate the power and flexibility of 
 
 - The payment auditing and aggregation functionalities of the system enable the institution to maintain a comprehensive audit trail of all processed payments. The aggregated payment data can be used for reconciliation, reporting, and analysis purposes.
 
+## Golang and python apis
+
+For the sake of convenience, one can access the projects herein: <https://github.com/adonese/pacs002> for both golang and python fastapi endpoints. But i'm also showing them here since they are rather small:
+
+```go
+package main
+
+import (
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"strings"
+
+	_ "github.com/mattn/go-sqlite3"
+)
+
+type PaymentStatus struct {
+	MessageID       string `json:"messageId"`
+	OriginalMessage struct {
+		MessageID string `json:"messageId"`
+	} `json:"originalMessage"`
+	Status string `json:"status"`
+}
+
+var db *sql.DB
+
+func main() {
+	var err error
+	db, err = sql.Open("sqlite3", "pacs002.db")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS payment_status (
+        message_id TEXT PRIMARY KEY,
+        original_message_id TEXT,
+        status TEXT
+    )`)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	http.HandleFunc("/pacs002", handlePacs002)
+	http.HandleFunc("/pacs002-messages", getPacs002Messages)
+	http.Handle("/", http.FileServer(http.Dir("static")))
+
+	log.Println("PACS.002 status service listening on port 8082...")
+	log.Fatal(http.ListenAndServe(":8082", nil))
+}
+
+func handlePacs002(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var paymentStatus PaymentStatus
+	err := json.NewDecoder(r.Body).Decode(&paymentStatus)
+	if err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	fmt.Printf("the request data is: %+v", paymentStatus)
+
+	// Save payment status to SQLite database
+	_, err = db.Exec(`INSERT INTO payment_status (message_id, original_message_id, status)
+        VALUES (?, ?, ?)`, paymentStatus.MessageID, paymentStatus.OriginalMessage.MessageID, paymentStatus.Status)
+	if err != nil {
+		http.Error(w, "Failed to save payment status", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusAccepted)
+}
+
+func getPacs002Messages(w http.ResponseWriter, r *http.Request) {
+	rows, err := db.Query("SELECT message_id, original_message_id, status FROM payment_status")
+	if err != nil {
+		http.Error(w, "Failed to retrieve payment status messages", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var tableRows strings.Builder
+	for rows.Next() {
+		var paymentStatus PaymentStatus
+		err := rows.Scan(&paymentStatus.MessageID, &paymentStatus.OriginalMessage.MessageID, &paymentStatus.Status)
+		if err != nil {
+			http.Error(w, "Failed to retrieve payment status messages", http.StatusInternalServerError)
+			return
+		}
+
+		tableRows.WriteString("<tr>")
+		tableRows.WriteString(fmt.Sprintf("<td class=\"px-4 py-2\">%s</td>", paymentStatus.MessageID))
+		tableRows.WriteString(fmt.Sprintf("<td class=\"px-4 py-2\">%s</td>", paymentStatus.OriginalMessage.MessageID))
+		tableRows.WriteString(fmt.Sprintf("<td class=\"px-4 py-2\">%s</td>", paymentStatus.Status))
+		tableRows.WriteString("</tr>")
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte(tableRows.String()))
+}
+```
+
+and the fastapi one
+
+```python
+from fastapi import FastAPI, Request
+import pandas as pd
+from fastapi.responses import HTMLResponse
+import json
+from collections import defaultdict
+
+
+
+
+app = FastAPI()
+
+analytics_results = {}  # Global variable to store the analytics results
+
+@app.post("/pacs008-analytics")
+async def pacs008_analytics(request: Request):
+    pacs008_data = await request.json()
+    print(f"the data is: {pacs008_data}")
+
+    if not pacs008_data:
+        return analytics_results
+
+    transactions = []
+
+    for payment in pacs008_data:
+        for tx in payment['FIToFICstmrCdtTrf']['CdtTrfTxInf']:
+            amt = tx['Amt']['InstdAmt']
+            transaction = defaultdict(str)
+            transaction['Amount'] = float(amt[''])
+            transaction['Currency'] = amt['Ccy']
+            transactions.append(transaction)
+
+    if not transactions:
+        return analytics_results
+
+    pacs008_df = pd.DataFrame(transactions)
+
+    total_amount = analytics_results.get('total_amount', 0) + pacs008_df[pacs008_df['Currency'] == 'EUR']['Amount'].sum()
+    currency_counts = analytics_results.get('currency_counts', {})
+    for currency, count in pacs008_df['Currency'].value_counts().items():
+        currency_counts[currency] = currency_counts.get(currency, 0) + count
+    max_amount = max(analytics_results.get('max_amount', 0), pacs008_df[pacs008_df['Currency'] == 'EUR']['Amount'].max())
+    min_amount = min(analytics_results.get('min_amount', float('inf')), pacs008_df[pacs008_df['Currency'] == 'EUR']['Amount'].min())
+
+    analytics_results['total_amount'] = total_amount
+    analytics_results['currency_counts'] = currency_counts
+    analytics_results['max_amount'] = max_amount
+    analytics_results['min_amount'] = min_amount
+
+    return analytics_results
+
+@app.get("/", response_class=HTMLResponse)
+def analytics_report():
+    total_amount = analytics_results.get('total_amount', 0)
+    currency_counts = analytics_results.get('currency_counts', {})
+    max_amount = analytics_results.get('max_amount', 0)
+    min_amount = analytics_results.get('min_amount', 0)
+
+    html_content = f"""
+    <html>
+    <head>
+    <title>PACS.008 Analytics</title>
+    </head>
+    <body>
+    <h1>PACS.008 Analytics Results</h1>
+    <p>Total Amount: {total_amount}</p>
+    <p>Maximum Amount: {max_amount}</p>
+    <p>Minimum Amount: {min_amount}</p>
+    <h2>Currency Counts:</h2>
+    <ul>
+    {''.join(f'<li>{currency}: {count}</li>' for currency, count in currency_counts.items())}
+    </ul>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content, status_code=200)
+
+
+```
+
+
+Those are both are highly experimental systems and need more refactoring and testing.
+
 
 ## Missing features
 
