@@ -22,6 +22,8 @@ At the core of our system lies the Apache Camel integration framework. Camel is 
 
 Camel provides a wide range of components and enterprise integration patterns (EIPs) that allow us to define complex integration scenarios with ease. We have utilized Camel's DSL (Domain Specific Language) to define the routes and processors for handling pacs.008 payment messages.
 
+We are also using activemq to give us a reliable messaging for our system.
+
 ### 2. pacs.008 Message Processing
 The pacs.008 message format is a standardized ISO 20022 message type used for customer credit transfers. Our system is specifically designed to handle and process pacs.008 messages efficiently.
 
@@ -50,12 +52,8 @@ The `aggregated-payments-report` route exposes an HTTP endpoint that generates a
 
 Furthermore, we have integrated a FastAPI endpoint (`fastapi-pacs008-analytics`) that performs advanced analytics on the aggregated payment data. It calculates metrics such as total payment amount, currency counts, and maximum/minimum payment amounts. The analytics results are exposed via an HTML response, providing a user-friendly interface for viewing the analytics dashboard.
 
-### 6. Deployment and Scalability
-To ensure easy deployment and scalability, we have containerized the PACS.008 Payment Processing System using Docker. The system can be easily deployed using Docker Compose, which allows for the definition and orchestration of multiple services.
-
-The Docker Compose file defines the necessary services, including the Apache Camel application, ActiveMQ message broker, and the Go microservice for PACS.002 status notifications. The services are configured to communicate with each other using appropriate network settings and environment variables.
-
-By leveraging Docker and Docker Compose, we can easily scale the system horizontally by deploying multiple instances of the services across different machines or cloud instances. This allows for handling increased payment volumes and ensures high availability.
+### 6. Deployment and Scalability (available in dev branch)
+All of these 4 services are dockerized and can be deployed using docker-compose. We have also included a `docker-compose.yml` file that can be used to deploy the entire system with a single command. The idea is to have a single entry for this larger complicated system where you can just do `docker-compose up` and have the entire system up and running, and tear it down with `docker-compose down`.
 
 ## Real-World Use Case
 Let's consider a real-world use case to illustrate the power and flexibility of the PACS.008 Payment Processing System. And this is frankly how I'm looking at this experiment:
@@ -73,6 +71,6 @@ Let's consider a real-world use case to illustrate the power and flexibility of 
 ## Missing features
 
 For the interest of time and we needed to make a tradeoff between delivering a working demo in favor of extensive unit testing, we are missing some vital components:
-- [ ] make the project dockerized
+- [x] make the project dockerized
 - [ ] unit testing especially for the core processing logic, such as the pacs008-processor. In the `dev` branch, we made a custom `Processor` class to parse and prepare pacs008 messages for other endpoints. But it is not availble in `main` yet
 - [ ] more _integration tests_ as we are expanding this dummy platform, it is very obvious we are bound to interact with external services those ought to be stubbed and mocked so that we can deterministically be confident about our system state

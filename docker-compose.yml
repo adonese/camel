@@ -1,0 +1,36 @@
+version: '3'
+services:
+  activemq:
+    image: rmohr/activemq
+    ports:
+      - "61616:61616"
+      - "8161:8161"
+
+  pacs008-integration:
+    build:
+      context: ./pacs008-integration
+      dockerfile: Dockerfile
+    depends_on:
+      - activemq
+      - pacs002-status
+    volumes:
+      - ./pacs008-integration/src:/app/src
+      - ./pacs008-integration/target:/app/target
+
+  pacs002-status:
+    build:
+      context: ./pacs002-status
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8082"
+    volumes:
+      - ./pacs002-status/pacs002.db:/app/pacs002.db
+
+  pacs008-analytics:
+    build:
+      context: ./pacs008-analytics
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./pacs008-analytics:/app
